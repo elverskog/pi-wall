@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html class="client-nojs" lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+</head>
+<body style="margin: 0"></body>
+<script src="lib/three.js"></script>
+<script src="lib/FlyControls.js"></script>
+
+<script>
+  //set up the scene basics
+  var scene = new THREE.Scene();
+  var flat = {flatShading: true};
+  var light = new THREE.HemisphereLight('white', 'grey', 0.5);
+  scene.add( light );
+
+  //the "camera" is what sees the stuff
+  var aspectRatio = window.innerWidth / window.innerHeight;
+  var camera = new THREE.PerspectiveCamera(75, aspectRatio, 1, 10000);
+  camera.position.z = 50;
+  camera.position.y = 40;
+  camera.rotation.x = -0.5;
+  scene.add(camera);
+
+  //light up the scene
+  var light = new THREE.PointLight('white', 0.75);
+  light.position.set(400, 400, 600);
+  scene.add( light );
+
+  //the "renderer" draws what the camera sees onto the screen
+  var renderer = new THREE.WebGLRenderer({antialias: true});
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
+
+  //add a basic sphere
+  var gut = new THREE.SphereGeometry(14.5, 20, 15);
+  var light = new THREE.MeshNormalMaterial(flat);
+  var ball = new THREE.Mesh(gut, light);
+  scene.add(ball);
+  ball.position.set(0,0,0)
+
+  //to create random (for color)
+  function r(max) {
+    if(max) return max * Math.random();
+    return Math.random()
+  }
+
+  //to create random color
+  function rColor() {
+    return new THREE.Color( r(), r(), r() );
+  }
+
+  function createBrick(y) {
+    //use Pi to figure out how many divisions we need
+    var brickLength = 2 * Math.PI / bricksPerRow
+
+    //get the positions from the polar coordinates
+    var zStart = Math.cos(startRadian) * radius
+    var xStart = Math.sin(startRadian) * radius
+
+    var zMiddle = Math.cos(startRadian + (brickLength / 2)) * (radius + brickLength)
+    var xMiddle = Math.sin(startRadian + (brickLength / 2)) * (radius + brickLength)
+
+    var zEnd = Math.cos(startRadian + brickLength) * radius
+    var xEnd = Math.sin(startRadian + brickLength) * radius
+
+    //set the variable that remembers the ending radian
+    startRadian += brickLength
+
+    //set three points in the arc
+    var start = new THREE.Vector3(xStart, y, zStart);
+    var middle = new THREE.Vector3(xMiddle, y, zMiddle);
+    var end = new THREE.Vector3(xEnd, y, zEnd);
+
+    //create the arc
+    var path = new THREE.QuadraticBezierCurve3(start, middle, end);
+
+    //create the box we then extrude
+    var length = 5, width = 5;
+    var shape = new THREE.Shape();
+    shape.lineTo( 0, width );
+    shape.lineTo( length, width );
+    shape.lineTo( length, 0 );
+    shape.lineTo( 0, 0 );
+
+    //extrude setting (steps decides how many segments/polygons)
+    var extrudeSettings = {
+      steps: 8,
+      extrudePath: path,
+    };
+
+    var geometry = new THREE.ExtrudeGeometry( shape, extrudeSettings );
+
+    var material = new THREE.MeshPhongMaterial({
+      color: rColor(),
+      shininess: 20,
+      specular: 'lightgrey',
+      side: THREE.DoubleSide,
+      flatShading: true
+    });
+
+    var mesh = new THREE.Mesh( geometry, material );
+
+    var center = new THREE.Object3D();
+    center.add(mesh);
+    scene.add(center);
+
+    //set the material for the brick
+    var material = new THREE.LineBasicMaterial({
+        color: 0xff00f0,
+    });
+
+    //highlight the lines in the shape
+    mesh.add(
+      new THREE.LineSegments(
+          geometry,
+          new THREE.LineBasicMaterial({
+              color: 'white',
+              transparent: true,
+              opacity: 0.5
+          })
+      )
+    );
+    
+    renderer.render(scene, camera);
+  
+  }
+
+  //create a variable to store the endpoint of the last brick
+  var bricksPerRow = 13
+  //create a variable to store the endpoint of the last brick
+  var startRadian = 0
+  var radius = 20
+  var brickCount = 0
+  var rowCount = 0
+  var positionY = -5;
+
+  //create brick loop, when row is done call build again
+  function build(y) {
+    createBrick(y);
+    window.setTimeout( function() {
+      if (brickCount < (bricksPerRow - 1)) {
+        build(y);
+        brickCount++
+      } else {
+        if (rowCount < 5) {
+          rowCount++
+          y = y + 5;
+          brickCount = 0
+          var brickLength = 2 * Math.PI / bricksPerRow
+          startRadian += brickLength / 2
+          build(y)
+        }
+      }
+    }, 150)
+
+  }
+
+  //set keybinding so that (for now) hitting B key will build the wall
+  document.addEventListener('keydown', sendKeyDown);
+  function sendKeyDown(event) {
+    var code = event.code;
+    if (code == 'KeyB') {
+      build(positionY)
+    }
+  }
+
+  //removed navigation as it doesn't really add anything
+  // var controls = new THREE.FlyControls(camera);
+  // controls.movementSpeed = 100;
+  // controls.rollSpeed = 0.5;
+  // controls.dragToLook = true;
+  // controls.autoForward = false;
+  // var clock = new THREE.Clock();
+
+  // function animate() {
+  //   var delta = clock.getDelta();
+  //   controls.update(delta);
+  //   renderer.render(scene, camera);
+  //   requestAnimationFrame(animate);
+  // }
+  // animate();
+
+  // Now, show what the camera sees on the screen:
+  renderer.render(scene, camera);
+
+</script>
+</html>
